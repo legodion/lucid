@@ -35,18 +35,48 @@ class MigrateCommand extends Command
         $namespace = app()->getNamespace();
         $models = collect();
 
-        foreach ((new Finder)->in($path)->files() as $model) {
-            $model = $namespace . str_replace(
-                ['/', '.php'],
-                ['\\', ''],
-                Str::after($model->getRealPath(), realpath(app_path()) . DIRECTORY_SEPARATOR)
-            );
+        $paths = array();
 
-            if (is_subclass_of($model, Model::class) && method_exists($model, 'migration')) {
-                $models->push([
-                    'object' => $object = app($model),
-                    'order' => $object->migrationOrder ?? 0,
-                ]);
+        array_push($paths, ['namespace' => $namespace  . 'Models', 'file' => $path]);
+
+        $modules_path = realpath(base_path()) . DIRECTORY_SEPARATOR . 'Modules';
+
+        if (is_dir($modules_path)) {
+
+            $dir = new \DirectoryIterator($modules_path);
+
+            foreach ($dir as $fileinfo) {
+                if (!$fileinfo->isDot() && $fileinfo->isDir()) {
+                    $module_name = $fileinfo->getFilename();
+                    $module_path = $modules_path . DIRECTORY_SEPARATOR . $module_name . DIRECTORY_SEPARATOR . 'Entities';
+                    array_push($paths, ['namespace' => 'Modules\\'  . $module_name . '\\Entities', 'file' => $module_path]);
+                }
+            }
+
+        }
+
+
+
+        foreach ($paths as $key => $path) {
+
+            foreach ((new Finder)->in($path['file'])->files() as $model) {
+
+                $real_path_arr = array_reverse(explode(DIRECTORY_SEPARATOR, $model->getRealPath()));
+
+                $model = $path['namespace'] . str_replace(
+                    ['/', '.php'],
+                    ['\\', ''],
+                    '\\' . $real_path_arr[0]
+                );
+
+                if (is_subclass_of($model, Model::class) && method_exists($model, 'migration')) {
+                    $models->push([
+                        'object' => $object = app($model),
+                        'order' => $object->migrationOrder ?? 0,
+                    ]);
+                }
+
+
             }
         }
 
