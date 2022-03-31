@@ -1,16 +1,7 @@
 {
     "name": "legodion/lucid",
     "description": "Declare database migrations and factory definitions inside Laravel models.",
-    "keywords": [
-        "php",
-        "laravel",
-        "database",
-        "migrations",
-        "factory",
-        "definitions",
-        "models",
-        "eloquent"
-    ],
+    "keywords": ["php", "laravel", "database", "migrations", "factory", "definitions", "models", "eloquent"],
     "license": "MIT",
     "require": {
         "doctrine/dbal": "^2.0|^3.0",

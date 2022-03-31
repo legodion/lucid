@@ -22,13 +22,15 @@ class ResourceCommand extends GeneratorCommand
                 '--force' => $this->option('force'),
             ]);
         }
+
+        return 0;
     }
 
     protected function getStub()
     {
         return $this->argument('name') == 'User'
-            ? __DIR__ . '/../Stubs/UserResource.php'
-            : __DIR__ . '/../Stubs/Resource.php';
+            ? __DIR__ . '/../../stubs/UserResource.php'
+            : __DIR__ . '/../../stubs/Resource.php';
     }
 
     protected function getDefaultNamespace($rootNamespace)

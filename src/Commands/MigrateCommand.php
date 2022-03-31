@@ -4,6 +4,7 @@ namespace Legodion\Lucid\Commands;
 
 use Doctrine\DBAL\Schema\Comparator;
 use Illuminate\Console\Command;
+use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -12,24 +13,28 @@ use Symfony\Component\Finder\Finder;
 
 class MigrateCommand extends Command
 {
-    protected $signature = 'lucid:migrate {--f|--fresh} {--s|--seed}';
+    use ConfirmableTrait;
+    
+    protected $signature = 'lucid:migrate {--f|--fresh} {--s|--seed} {--force}';
 
     public function handle()
     {
-        $this->call($this->option('fresh') ? 'migrate:fresh' : 'migrate', [
-            '--force' => true,
-        ]);
+        if (!$this->confirmToProceed()) {
+            return 1;
+        }
+
+        $this->call($this->option('fresh') ? 'migrate:fresh' : 'migrate', ['--force' => true]);
 
         $this->migrateModels();
 
         if ($this->option('seed')) {
-            $this->call('db:seed', [
-                '--force' => true,
-            ]);
+            $this->call('db:seed', ['--force' => true]);
         }
+
+        return 0;
     }
 
-    public function migrateModels()
+    protected function migrateModels()
     {
         $path = is_dir(app_path('Models')) ? app_path('Models') : app_path();
         $namespace = app()->getNamespace();
@@ -55,8 +60,6 @@ class MigrateCommand extends Command
 
         }
 
-
-
         foreach ($paths as $key => $path) {
 
             foreach ((new Finder)->in($path['file'])->files() as $model) {
@@ -77,6 +80,7 @@ class MigrateCommand extends Command
                 }
 
 
+
             }
         }
 
@@ -85,7 +89,7 @@ class MigrateCommand extends Command
         }
     }
 
-    public function migrateModel(Model $model)
+    protected function migrateModel(Model $model)
     {
         $modelTable = $model->getTable();
         $tempTable = 'table_' . $modelTable;
@@ -97,15 +101,11 @@ class MigrateCommand extends Command
         });
 
         if (Schema::hasTable($modelTable)) {
-            $schemaManager = $model->getConnection()->getDoctrineSchemaManager();
+            $manager = $model->getConnection()->getDoctrineSchemaManager();
+            $diff = (new Comparator)->diffTable($manager->listTableDetails($modelTable), $manager->listTableDetails($tempTable));
 
-            $tableDiff = (new Comparator)->diffTable(
-                $schemaManager->listTableDetails($modelTable),
-                $schemaManager->listTableDetails($tempTable)
-            );
-
-            if ($tableDiff) {
-                $schemaManager->alterTable($tableDiff);
+            if ($diff) {
+                $manager->alterTable($diff);
 
                 $this->line('<info>Table updated:</info> ' . $modelTable);
             }

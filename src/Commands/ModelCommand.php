@@ -3,7 +3,6 @@
 namespace Legodion\Lucid\Commands;
 
 use Illuminate\Console\GeneratorCommand;
-use Illuminate\Filesystem\Filesystem;
 use Symfony\Component\Console\Input\InputOption;
 
 class ModelCommand extends GeneratorCommand
@@ -18,10 +17,7 @@ class ModelCommand extends GeneratorCommand
         }
 
         if ($this->argument('name') == 'User') {
-            (new Filesystem)->delete([
-                database_path('factories/UserFactory.php'),
-                database_path('migrations/2014_10_12_000000_create_users_table.php'),
-            ]);
+            $this->backupUserFiles();
         }
 
         if ($this->option('resource')) {
@@ -30,13 +26,29 @@ class ModelCommand extends GeneratorCommand
                 '--force' => $this->option('force'),
             ]);
         }
+
+        return 0;
+    }
+
+    protected function backupUserFiles()
+    {
+        $files = [
+            database_path('factories/UserFactory.php'),
+            database_path('migrations/2014_10_12_000000_create_users_table.php'),
+        ];
+
+        foreach ($files as $file) {
+            if (file_exists($file)) {
+                rename($file, $file . '.bak');
+            }
+        }
     }
 
     protected function getStub()
     {
         return $this->argument('name') == 'User'
-            ? __DIR__ . '/../Stubs/UserModel.php'
-            : __DIR__ . '/../Stubs/Model.php';
+            ? __DIR__ . '/../../stubs/UserModel.php'
+            : __DIR__ . '/../../stubs/Model.php';
     }
 
     protected function getDefaultNamespace($rootNamespace)
